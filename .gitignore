@@ -2,6 +2,9 @@
 .DS_Store
 Thumbs.db
 
+# env files
+*.env
+
 # Editor / IDE
 .idea/
 .vscode/
@@ -45,5 +48,5 @@ backend/src/test/resources/application.yml
 backend/src/main/resources/db/migration/*
 
 # Local secrets / machine-specific config
-backend/src/main/resources/application.yml
-backend/src/test/resources/application.yml
+# backend/src/main/resources/application.yml
+# backend/src/test/resources/application.yml
