@@ -1,0 +1,41 @@
+.hero {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 1.5rem;
+  background: radial-gradient(circle at top, #ffe4ec, #f6f6f6 55%);
+}
+
+.hero-kicker {
+  color: #9055fd;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+.hero-sub {
+  max-width: 540px;
+  margin: 0 auto 2rem;
+  color: #52525b;
+}
+
+.primary {
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.primary:hover {
+  opacity: 0.9;
+}

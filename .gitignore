@@ -1,0 +1,49 @@
+# macOS / OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+*.out
+*.err
+
+# Frontend (Vite / Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+frontend/package-lock.json
+
+
+# Backend (Gradle / Spring Boot)
+backend/.gradle/
+backend/.gradle-home/
+backend/build/
+backend/db/
+backend/gradle/
+backend/scripts/
+backend/out/
+backend/*.log
+backend/*.rdb
+backend/gradlew
+
+backend/src/test/resources/application.yml
+
+backend/src/main/resources/db/migration/*
+
+# Local secrets / machine-specific config
+backend/src/main/resources/application.yml
+backend/src/test/resources/application.yml
