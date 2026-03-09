@@ -1,0 +1,79 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    cloud-platform: NONE
+  docker:
+    compose:
+      enabled: false
+  application:
+    name: emoque-backend
+  datasource:
+    url: ${DATASOURCE_URL}
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  # ✅ 파일 업로드 용량 설정 추가
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    rabbit:
+      enabled: false
+
+openai:
+  provider: ollama
+  ollamaUrl: ${OLLAMA_HOST}
+  apiKey: ${OLLAMA_API_KEY}
+  chatModel: llama3:8b
+  imageModel: gpt-image-1
+
+image:
+  provider: gemini
+  size: 1024x1024
+  openai:
+    url: ${OPENAI_URL}
+    apiKey: ${OPENAI_API_KEY}
+    defaultModel: gemini-2.5-flash-image
+    responseFormat: b64_json
+
+generation:
+  queue:
+    enabled: true
+  redis:
+    enabled: true
+
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID}
+    secret: ${GOOGLE_CLIENT_SECRET}
