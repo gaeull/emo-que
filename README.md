@@ -77,11 +77,3 @@ npm run dev
 | MySQL    | `jdbc:mysql://localhost:3306/emoque` | Update username/password in `application.yml`; schema auto-creates via JPA. |
 | RabbitMQ | `localhost:5672` | Queue name: `emoque.tasks`. |
 | Redis    | `localhost:6379` | Stores transient task status. |
-
-## Next Steps
-
-1. Replace stub clients with real OpenAI + image providers (DALL·E 3, Stable Diffusion, etc.).
-2. Persist user/chat/task entities in MySQL and attach a blob store for image assets.
-3. Add Google login & OAuth screen-scraping to fetch ChatGPT history automatically.
-4. Implement ZIP packaging / email delivery once generation finishes.
-5. Harden with integration tests plus job retry/backoff policies.
