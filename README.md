@@ -1,5 +1,7 @@
 # Emoque – AI-Based Personalized Emoticon Service
 
+**Developed using AI-assisted coding tools including Cursor, Gemini, and GitHub Copilot to optimize architectural design and implementation.**
+
 AI-powered web app that blends survey input, ChatGPT conversation history, and curated emotion prompts to generate export-ready emoticon packs plus a one-line bio.
 
 ## Project Structure
