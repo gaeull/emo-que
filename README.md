@@ -49,8 +49,8 @@ bash backend/scripts/run_jar.sh
 Optional:
 
 ```
-# run worker message consumer only when RabbitMQ is available
-SPRING_PROFILES_ACTIVE=worker bash backend/scripts/run_jar.sh
+# disable embedded queue consumers if you run a separate worker instance
+WORKER_ENABLED=false bash backend/scripts/run_jar.sh
 
 # tune JVM
 JAVA_OPTS="-Xms256m -Xmx512m" bash backend/scripts/run_jar.sh

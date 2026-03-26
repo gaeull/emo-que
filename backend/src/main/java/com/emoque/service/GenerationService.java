@@ -27,7 +27,10 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class GenerationService {
@@ -74,13 +77,10 @@ public class GenerationService {
         generationTaskRepository.save(task);
 
         if (queueEnabled) {
-            try {
-                rabbitTemplate.convertAndSend(RabbitMQConfig.TASK_QUEUE, taskId);
-                setStatusInRedis(taskId, GenerationTask.Status.QUEUED);
-                return new TaskStatusResponse(taskId, task.getStatus().name(), null);
-            } catch (Exception ex) {
-                log.warn("RabbitMQ unavailable, processing task {} inline", taskId, ex);
-            }
+            publishAfterCommit(taskId);
+            return new TaskStatusResponse(taskId, task.getStatus().name(), null);
+        } else {
+            log.info("Generation queue disabled; processing task {} inline", taskId);
         }
 
         // Fallback: process inline when RabbitMQ is disabled/unavailable
@@ -95,10 +95,13 @@ public class GenerationService {
         return new TaskStatusResponse(updatedTask.getId(), updatedTask.getStatus().name(), updatedTask.getFailureReason());
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void processTask(String taskId) {
-        GenerationTask task = generationTaskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+        GenerationTask task = findTaskWithRetry(taskId);
+        if (task == null) {
+            log.warn("Generation task {} not found after retry; skipping message", taskId);
+            return;
+        }
 
         task.setStatus(GenerationTask.Status.RUNNING);
         setStatusInRedis(taskId, GenerationTask.Status.RUNNING);
@@ -129,6 +132,26 @@ public class GenerationService {
         generationTaskRepository.save(task);
     }
 
+    private GenerationTask findTaskWithRetry(String taskId) {
+        final int maxAttempts = 20;
+        final long sleepMs = 100L;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            GenerationTask task = generationTaskRepository.findById(taskId).orElse(null);
+            if (task != null) {
+                return task;
+            }
+            if (attempt < maxAttempts) {
+                try {
+                    Thread.sleep(sleepMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
     private void setStatusInRedis(String taskId, GenerationTask.Status status) {
         if (!redisEnabled) {
             return;
@@ -137,6 +160,30 @@ public class GenerationService {
             redisTemplate.opsForValue().set(taskId, status.name());
         } catch (Exception ex) {
             log.warn("Redis unavailable, skipping status cache for task {}", taskId, ex);
+        }
+    }
+
+    private void publishAfterCommit(String taskId) {
+        Runnable action = () -> {
+            try {
+                log.info("Publishing generation task {} to RabbitMQ queue {}", taskId, RabbitMQConfig.TASK_QUEUE);
+                rabbitTemplate.convertAndSend(RabbitMQConfig.TASK_QUEUE, taskId);
+                setStatusInRedis(taskId, GenerationTask.Status.QUEUED);
+            } catch (Exception ex) {
+                log.warn("RabbitMQ unavailable after commit, processing task {} inline", taskId, ex);
+                processTask(taskId);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
         }
     }
 

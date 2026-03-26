@@ -11,11 +11,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OpenAiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(OpenAiClient.class);
 
     private final OpenAiProperties properties;
     private final ObjectMapper mapper;
@@ -24,7 +29,9 @@ public class OpenAiClient {
     public OpenAiClient(OpenAiProperties properties, ObjectMapper mapper) {
         this.properties = properties;
         this.mapper = mapper;
-        this.http = HttpClient.newHttpClient();
+        this.http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(8))
+                .build();
     }
 
     private boolean isApiConfigured() {
@@ -101,6 +108,8 @@ public class OpenAiClient {
             }
             return localIntro(profile, conversation, prompt);
         } catch (Exception e) {
+            log.warn("Bio generation via provider '{}' failed; using local fallback: {}",
+                    properties.getProvider(), e.getMessage());
             if (profile != null || conversation != null) {
                 return localIntro(profile, conversation, prompt);
             }
@@ -216,6 +225,7 @@ public class OpenAiClient {
                 .uri(URI.create("https://api.openai.com/v1/chat/completions"))
                 .header("Authorization", "Bearer " + properties.getApiKey())
                 .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(20))
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 
@@ -231,6 +241,9 @@ public class OpenAiClient {
     }
 
     private String chatViaOllama(String system, String user, double temperature, int maxTokens) throws Exception {
+        if (properties.getOllamaUrl() == null || properties.getOllamaUrl().isBlank()) {
+            throw new IllegalStateException("openai.ollamaUrl is not configured");
+        }
         ObjectNode bodyNode = mapper.createObjectNode();
         bodyNode.put("model", properties.getChatModel());
         bodyNode.put("stream", false);
@@ -252,6 +265,7 @@ public class OpenAiClient {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(properties.getOllamaUrl()))
                 .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(20))
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 

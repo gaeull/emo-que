@@ -7,13 +7,17 @@ import com.emoque.model.UserProfile;
 import com.emoque.repository.ChatConversationRepository;
 import com.emoque.repository.IntroTaskRepository;
 import com.emoque.repository.UserProfileRepository;
+import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class IntroTaskService {
@@ -49,12 +53,10 @@ public class IntroTaskService {
         introTaskRepository.save(task);
 
         if (queueEnabled) {
-            try {
-                rabbitTemplate.convertAndSend(RabbitMQConfig.INTRO_QUEUE, task.getId());
-                return task;
-            } catch (Exception ex) {
-                log.warn("RabbitMQ unavailable, processing intro task {} inline", task.getId(), ex);
-            }
+            publishAfterCommit(task.getId());
+            return task;
+        } else {
+            log.info("Intro queue disabled; processing intro task {} inline", task.getId());
         }
 
         processTask(task.getId());
@@ -62,10 +64,13 @@ public class IntroTaskService {
                 .orElseThrow(() -> new IllegalArgumentException("Intro task not found"));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void processTask(String taskId) {
-        IntroTask task = introTaskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("Intro task not found"));
+        IntroTask task = findTaskWithRetry(taskId);
+        if (task == null) {
+            log.warn("Intro task {} not found after retry; skipping message", taskId);
+            return;
+        }
         task.setStatus(IntroTask.Status.RUNNING);
         introTaskRepository.save(task);
 
@@ -89,9 +94,62 @@ public class IntroTaskService {
         introTaskRepository.save(task);
     }
 
-    @Transactional(readOnly = true)
+    private IntroTask findTaskWithRetry(String taskId) {
+        final int maxAttempts = 20;
+        final long sleepMs = 100L;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            IntroTask task = introTaskRepository.findById(taskId).orElse(null);
+            if (task != null) {
+                return task;
+            }
+            if (attempt < maxAttempts) {
+                try {
+                    Thread.sleep(sleepMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Transactional
     public IntroTask getTask(String taskId) {
-        return introTaskRepository.findById(taskId)
+        IntroTask task = introTaskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Intro task not found"));
+
+        if (task.getStatus() == IntroTask.Status.QUEUED
+                && task.getCreatedAt() != null
+                && task.getCreatedAt().isBefore(Instant.now().minusSeconds(20))) {
+            log.warn("Intro task {} stuck in QUEUED; attempting inline recovery", taskId);
+            processTask(taskId);
+            return introTaskRepository.findById(taskId)
+                    .orElseThrow(() -> new IllegalArgumentException("Intro task not found"));
+        }
+        return task;
+    }
+
+    private void publishAfterCommit(String taskId) {
+        Runnable action = () -> {
+            try {
+                log.info("Publishing intro task {} to RabbitMQ queue {}", taskId, RabbitMQConfig.INTRO_QUEUE);
+                rabbitTemplate.convertAndSend(RabbitMQConfig.INTRO_QUEUE, taskId);
+            } catch (Exception ex) {
+                log.warn("RabbitMQ unavailable after commit, processing intro task {} inline", taskId, ex);
+                processTask(taskId);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 }

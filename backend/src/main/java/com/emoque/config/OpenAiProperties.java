@@ -1,6 +1,5 @@
 package com.emoque.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,15 +7,10 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "openai")
 public class OpenAiProperties {
 
-    @Value("${openai.provider")
     private String provider;
-    @Value("${openai.ollamaUrl")
     private String ollamaUrl;
-    @Value("${openai.apiKey")
     private String apiKey;
-    @Value("${openai.chatModel")
     private String chatModel;
-    @Value("${openai.imageModel")
     private String imageModel;
 
     public String getProvider() {
