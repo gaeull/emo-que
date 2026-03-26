@@ -73,6 +73,13 @@ generation:
   redis:
     enabled: true
 
+intro:
+  queue:
+    enabled: true
+
+worker:
+  enabled: true
+
 google:
   client:
     id: ${GOOGLE_CLIENT_ID}

@@ -32,7 +32,9 @@ const IntroGenerator = ({ userId, onIntro }: Props) => {
 
   useEffect(() => {
     if (!loading || !taskId) return;
+    let attempts = 0;
     const interval = setInterval(async () => {
+      attempts += 1;
       try {
         const task = await fetchIntroTask(taskId);
         if (task.status === 'COMPLETED') {
@@ -43,6 +45,10 @@ const IntroGenerator = ({ userId, onIntro }: Props) => {
           setLoading(false);
           setTaskId(null);
           setError('Failed to generate intro.');
+        } else if (attempts >= 48) {
+          setLoading(false);
+          setTaskId(null);
+          setError('Intro generation timed out. Check backend worker/RabbitMQ/Ollama logs.');
         }
       } catch (e) {
         console.error(e);
