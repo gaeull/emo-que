@@ -45,14 +45,29 @@ public class ImageGenerationClient {
         String imagePrompt = prompt
                 + " | Emotion: "
                 + emotion
-                + " | Create a simple character illustration. \\n" + //
-                                        "\\n" + //
-                                        "Style:\\n" + //
-                                        "Minimalist illustration with thin, black line art.\\n" + //
-                                        "simple shapes.\\n" + //
-                                        "Flat colors.\\n" + //
-                                        // "Soft, light pastel accents only when needed.\\n" + //
-                                        " Overall feeling should be silly, awkward, and endearing rather than polished.\\n";
+                + "| Create a distinct, lovable character illustration optimized for messaging emojis, reflecting the provided personal attributes. \\n\n" + //
+                                        "\\n\n" + //
+                                        "Style: \\n\n" + //
+                                        "1. Line Art & Form: \\n\n" + //
+                                        "Simple, slightly irregular black outlines with a hand-drawn, cozy texture. (Avoid perfectly clean, vector-like lines). Form the character using cute, rounded, and plump shapes that enhance its endearment. Focus on exaggerated facial expressions and playful body language to convey specific emotions effectively. \\n\n" + //
+                                        "\n" + //
+                                        "2. Color Palette & Shading: \\n\n" + //
+                                        "Use a cheerful and vibrant flat color palette as the base. Apply soft, light pastel colors specifically to emphasize character traits or important details. Crucially, incorporate simple, airbrushed, light pastel blending (like soft blush or subtle gradients) on cheeks, limb joints, and key features to add depth, warmth, and a lovable quality. \\n\n" + //
+                                        "\n" + //
+                                        "3. Composition & Appeal: \\n\n" + //
+                                        "Maintain a clean white or transparent background for easy cutout as an emoji. The overall feeling must balance a charming, 'silly and awkward' vibe with a genuinely cute and polished, professional-emoji aesthetic. Every character should feel unique and full of personality. \\n\n" + //
+                                        "\n" + //
+                                        "4. Context Integration: \\n\n" + //
+                                        "Intelligently translate the user's personality traits and conversational nuances (from provided data) into visible, illustrative elements – such as specific accessories, costume details, background props, or unique poses that distinctively represent them. \\n" ;
+                // 2026-03-28 변경 전, 기본값
+                // + " | Create a simple character illustration. \\n" + //
+                //                         "\\n" + //
+                //                         "Style:\\n" + //
+                //                         "Minimalist illustration with thin, black line art.\\n" + //
+                //                         "simple shapes.\\n" + //
+                //                         "Flat colors.\\n" + //
+                //                         // "Soft, light pastel accents only when needed.\\n" + //
+                //                         " Overall feeling should be silly, awkward, and endearing rather than polished.\\n";
         // 2026-01-03 변경 전, 기본값
         // String imagePrompt = prompt
         //         + " | Emotion: "
@@ -136,7 +151,7 @@ public class ImageGenerationClient {
         throw new IllegalStateException("A1111 generation failed: " + res.statusCode());
     }
 
-    private String generateWithOpenAi(String prompt) throws Exception {
+private String generateWithOpenAi(String prompt) throws Exception {
         String model = (openAi.getImageModel() == null || openAi.getImageModel().isBlank())
                 ? "gpt-image-1"
                 : openAi.getImageModel();
@@ -243,6 +258,9 @@ public class ImageGenerationClient {
         // dims.put("height", size[1]);
         // genCfg.set("responseImageDimensions", dims);
         root.set("generationConfig", genCfg);
+        
+        // 2026-03-28 change default prompt and test
+        System.out.println("Gemini prompt before sending: " + prompt);
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(geminiUrl + "?key=" + geminiApiKey))
@@ -253,8 +271,8 @@ public class ImageGenerationClient {
         HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
 
         // 2026-01-03 add debug point
-        System.out.println("response status code: " + res.statusCode());
-        System.out.println("response status body: " + res.body());
+        // System.out.println("response status code: " + res.statusCode());
+        // System.out.println("response status body: " + res.body());
 
         // 여기서 throw발생
         if (res.statusCode() >= 200 && res.statusCode() < 300) {

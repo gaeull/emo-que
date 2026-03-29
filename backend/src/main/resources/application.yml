@@ -41,6 +41,12 @@ spring:
     multipart:
       max-file-size: 1GB
       max-request-size: 1GB
+  
+  # 2026-03-29 JPA와의 충돌을 방지하기 위해 Redis 리포지토리 스캔 비활성화
+  data:
+    redis:
+      repositories:
+        enabled: true
 
 management:
   endpoints:
