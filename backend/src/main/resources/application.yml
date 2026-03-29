@@ -46,7 +46,7 @@ spring:
   data:
     redis:
       repositories:
-        enabled: true
+        enabled: false
 
 management:
   endpoints:
